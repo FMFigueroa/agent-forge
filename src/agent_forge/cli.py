@@ -1,10 +1,12 @@
+import asyncio
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from agent_forge import __version__
-from agent_forge.observability.factory import build_tracer
+from agent_forge.observability.factory import build_pipeline, build_tracer
 
 app = typer.Typer(
     name="agent-forge",
@@ -27,10 +29,21 @@ def generate(
     topic: str = typer.Argument(..., help="The topic for the LinkedIn post."),
     persona: str = typer.Option("senior-engineer", "--persona", "-p"),
 ) -> None:
-    """Generate a LinkedIn post by orchestrating the agent team. (stub)"""
+    """Generate a LinkedIn post by orchestrating the agent team."""
     console.print(f"[yellow]→ Generating post about:[/] {topic}")
     console.print(f"[yellow]→ Persona:[/] {persona}")
-    console.print("[red]Not yet implemented — coming soon.[/]")
+    console.print("[dim]Running researcher → drafter → orchestrator...[/]")
+
+    pipeline = build_pipeline()
+    result = asyncio.run(pipeline.run(topic))
+
+    console.print()
+    console.print(Panel(result.final_post, title="Final post", border_style="green"))
+    console.print(
+        f"\n[dim]→ Run [cyan]{result.run_id}[/] traced. "
+        f"Cost: [green]${result.total_cost:.4f}[/]. "
+        f"Inspect: [bold]agent-forge traces show {result.run_id}[/][/]"
+    )
 
 
 @app.command()

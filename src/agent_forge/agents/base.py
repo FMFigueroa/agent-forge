@@ -42,12 +42,16 @@ class Agent(ABC):
         client: AsyncAnthropic,
         tracer: Tracer,
         max_tokens: int = 16000,
+        thinking: dict[str, Any] | None = None,
+        effort: str | None = None,
     ) -> None:
         self.name = name
         self.model = model
         self.client = client
         self.tracer = tracer
         self.max_tokens = max_tokens
+        self.thinking = thinking
+        self.effort = effort
 
     @property
     @abstractmethod
@@ -59,19 +63,25 @@ class Agent(ABC):
         started_at = datetime.now(UTC)
         t0 = time.perf_counter()
 
+        request_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": [
+                {
+                    "type": "text",
+                    "text": self.system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            "messages": [{"role": "user", "content": user_message}],
+        }
+        if self.thinking is not None:
+            request_kwargs["thinking"] = self.thinking
+        if self.effort is not None:
+            request_kwargs["output_config"] = {"effort": self.effort}
+
         try:
-            response: Any = await self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                system=[
-                    {
-                        "type": "text",
-                        "text": self.system_prompt,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                messages=[{"role": "user", "content": user_message}],
-            )
+            response: Any = await self.client.messages.create(**request_kwargs)
         except Exception as exc:
             self._record(
                 span_id=span_id,
