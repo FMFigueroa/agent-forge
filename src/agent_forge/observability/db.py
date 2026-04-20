@@ -72,6 +72,21 @@ class SpanRow(SQLModel, table=True):
         )
 
 
+class JudgmentRow(SQLModel, table=True):
+    __tablename__ = "judgments"  # type: ignore[assignment]
+
+    id: str = Field(primary_key=True)
+    run_id: str = Field(foreign_key="runs.id", index=True)
+    judge_model: str
+    hook_strength: int
+    clarity: int
+    persona_fit: int
+    engagement_potential: int
+    overall: float
+    reasoning: str
+    judged_at: datetime
+
+
 def create_db_engine(db_url: str) -> Engine:
     connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
     return create_engine(db_url, connect_args=connect_args)

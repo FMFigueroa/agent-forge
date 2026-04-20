@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from statistics import quantiles
 
@@ -6,7 +7,14 @@ from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
 from agent_forge.agents.models import TraceSpan
-from agent_forge.observability.db import RunRow, SpanRow, create_db_engine, init_db
+from agent_forge.evals.models import Judgment, RubricScore
+from agent_forge.observability.db import (
+    JudgmentRow,
+    RunRow,
+    SpanRow,
+    create_db_engine,
+    init_db,
+)
 
 
 class RunSummary(BaseModel):
@@ -88,3 +96,45 @@ class SQLiteTracer:
             run.status = status
             session.add(run)
             session.commit()
+
+    def record_judgment(self, judgment: Judgment) -> None:
+        with Session(self._engine) as session:
+            session.add(
+                JudgmentRow(
+                    id=str(uuid.uuid4()),
+                    run_id=judgment.run_id,
+                    judge_model=judgment.judge_model,
+                    hook_strength=judgment.scores.hook_strength,
+                    clarity=judgment.scores.clarity,
+                    persona_fit=judgment.scores.persona_fit,
+                    engagement_potential=judgment.scores.engagement_potential,
+                    overall=judgment.scores.overall,
+                    reasoning=judgment.reasoning,
+                    judged_at=judgment.judged_at,
+                )
+            )
+            session.commit()
+
+    def judgments_for_run(self, run_id: str) -> list[Judgment]:
+        with Session(self._engine) as session:
+            stmt = (
+                select(JudgmentRow)
+                .where(JudgmentRow.run_id == run_id)
+                .order_by(col(JudgmentRow.judged_at))
+            )
+            rows = session.scalars(stmt).all()
+        return [
+            Judgment(
+                run_id=r.run_id,
+                judge_model=r.judge_model,
+                scores=RubricScore(
+                    hook_strength=r.hook_strength,
+                    clarity=r.clarity,
+                    persona_fit=r.persona_fit,
+                    engagement_potential=r.engagement_potential,
+                ),
+                reasoning=r.reasoning,
+                judged_at=r.judged_at,
+            )
+            for r in rows
+        ]
