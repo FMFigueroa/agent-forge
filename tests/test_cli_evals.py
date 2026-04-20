@@ -23,7 +23,10 @@ def _item(run_id: str, topic: str, overall: int) -> EvalItem:
             topic=topic,
             research="- insight",
             draft="draft",
+            edited_draft="edited",
             final_post="final",
+            hashtags=["#AI"],
+            carousel_slides=[],
             total_cost=0.1,
         ),
         judgment=Judgment(

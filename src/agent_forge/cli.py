@@ -36,16 +36,29 @@ def generate(
     topic: str = typer.Argument(..., help="The topic for the LinkedIn post."),
     persona: str = typer.Option("senior-engineer", "--persona", "-p"),
 ) -> None:
-    """Generate a LinkedIn post by orchestrating the agent team."""
+    """Generate a LinkedIn post by orchestrating the full agent team."""
     console.print(f"[yellow]→ Generating post about:[/] {topic}")
     console.print(f"[yellow]→ Persona:[/] {persona}")
-    console.print("[dim]Running researcher → drafter → orchestrator...[/]")
+    console.print(
+        "[dim]Running researcher → drafter → editor → orchestrator → (hashtags ∥ carousel)...[/]"
+    )
 
     pipeline = build_pipeline()
     result = asyncio.run(pipeline.run(topic))
 
     console.print()
     console.print(Panel(result.final_post, title="Final post", border_style="green"))
+
+    console.print(f"\n[bold]Hashtags:[/] {' '.join(result.hashtags)}")
+
+    slides_table = Table(title="Carousel slides")
+    slides_table.add_column("#", justify="right", style="dim")
+    slides_table.add_column("title", style="cyan")
+    slides_table.add_column("image prompt", overflow="fold")
+    for i, slide in enumerate(result.carousel_slides, start=1):
+        slides_table.add_row(str(i), slide.title, slide.image_prompt)
+    console.print(slides_table)
+
     console.print(
         f"\n[dim]→ Run [cyan]{result.run_id}[/] traced. "
         f"Cost: [green]${result.total_cost:.4f}[/]. "

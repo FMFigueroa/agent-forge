@@ -12,12 +12,21 @@ runner = CliRunner(env={"COLUMNS": "200"})
 
 
 def _fake_generation_result(run_id: str = "run-abc123") -> GenerationResult:
+    from agent_forge.agents.image_prompter import CarouselSlide
+
     return GenerationResult(
         run_id=run_id,
         topic="context windows",
         research="- bullet 1\n- bullet 2",
         draft="Draft body.",
+        edited_draft="Refined draft body.",
         final_post="Final post body — polished and ready to ship.",
+        hashtags=["#AI", "#LLMs", "#Engineering"],
+        carousel_slides=[
+            CarouselSlide(title="Hook", image_prompt="close-up of a circuit board"),
+            CarouselSlide(title="Insight", image_prompt="split-screen diagram"),
+            CarouselSlide(title="Takeaway", image_prompt="minimalist text card"),
+        ],
         total_cost=0.1234,
     )
 
