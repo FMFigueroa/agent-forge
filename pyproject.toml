@@ -1,0 +1,55 @@
+[project]
+name = "agent-forge"
+version = "0.1.0"
+description = "Multi-agent LinkedIn content factory powered by Claude — with built-in observability, cost tracking, and LLM-as-judge evals."
+authors = [
+    { name = "FMFigueroa", email = "felixmanuelfigueroa@gmail.com" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.42.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "sqlmodel>=0.0.22",
+    "httpx>=0.28.0",
+    "rich>=13.9.0",
+    "python-dotenv>=1.0.1",
+    "typer>=0.15.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+    "pyright>=1.1.390",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+]
+
+[project.scripts]
+agent-forge = "agent_forge.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
