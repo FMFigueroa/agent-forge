@@ -44,6 +44,7 @@ class Agent(ABC):
         max_tokens: int = 16000,
         thinking: dict[str, Any] | None = None,
         effort: str | None = None,
+        output_schema: dict[str, Any] | None = None,
     ) -> None:
         self.name = name
         self.model = model
@@ -52,6 +53,7 @@ class Agent(ABC):
         self.max_tokens = max_tokens
         self.thinking = thinking
         self.effort = effort
+        self.output_schema = output_schema
 
     @property
     @abstractmethod
@@ -77,8 +79,17 @@ class Agent(ABC):
         }
         if self.thinking is not None:
             request_kwargs["thinking"] = self.thinking
+
+        output_config: dict[str, Any] = {}
         if self.effort is not None:
-            request_kwargs["output_config"] = {"effort": self.effort}
+            output_config["effort"] = self.effort
+        if self.output_schema is not None:
+            output_config["format"] = {
+                "type": "json_schema",
+                "schema": self.output_schema,
+            }
+        if output_config:
+            request_kwargs["output_config"] = output_config
 
         try:
             response: Any = await self.client.messages.create(**request_kwargs)

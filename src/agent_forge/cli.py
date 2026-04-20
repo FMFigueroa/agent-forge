@@ -6,7 +6,12 @@ from rich.panel import Panel
 from rich.table import Table
 
 from agent_forge import __version__
-from agent_forge.observability.factory import build_pipeline, build_tracer
+from agent_forge.evals.golden_set import GOLDEN_TOPICS
+from agent_forge.observability.factory import (
+    build_eval_runner,
+    build_pipeline,
+    build_tracer,
+)
 
 app = typer.Typer(
     name="agent-forge",
@@ -14,7 +19,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 traces_app = typer.Typer(help="Inspect agent traces.", no_args_is_help=True)
+evals_app = typer.Typer(help="Run and inspect LLM-as-judge evals.", no_args_is_help=True)
 app.add_typer(traces_app, name="traces")
+app.add_typer(evals_app, name="evals")
 console = Console()
 
 
@@ -135,6 +142,78 @@ def traces_show(run_id: str = typer.Argument(..., help="Run ID to inspect.")) ->
         )
 
     console.print(table)
+
+
+@evals_app.command("run")
+def evals_run(
+    limit: int = typer.Option(
+        0, "--limit", "-n", min=0, help="Run only the first N topics (0 = all)."
+    ),
+) -> None:
+    """Run the LLM-as-judge eval over the golden set."""
+    topics = GOLDEN_TOPICS[:limit] if limit else GOLDEN_TOPICS
+    console.print(f"[yellow]→ Running evals on {len(topics)} topic(s)...[/]")
+
+    runner, _ = build_eval_runner()
+    report = asyncio.run(runner.run_set(topics))
+
+    table = Table(title=f"Eval results (n={len(report.items)})")
+    table.add_column("topic", style="cyan", overflow="fold")
+    table.add_column("run_id", style="dim", no_wrap=True)
+    table.add_column("hook", justify="right")
+    table.add_column("clarity", justify="right")
+    table.add_column("persona", justify="right")
+    table.add_column("engage", justify="right")
+    table.add_column("overall", justify="right", style="green")
+
+    for item in report.items:
+        s = item.judgment.scores
+        table.add_row(
+            item.topic,
+            item.generation.run_id,
+            str(s.hook_strength),
+            str(s.clarity),
+            str(s.persona_fit),
+            str(s.engagement_potential),
+            f"{s.overall:.1f}",
+        )
+
+    console.print(table)
+    console.print(
+        f"\n[bold]Mean overall:[/] [green]{report.mean_overall:.2f}[/]   "
+        f"[bold]Mean hook:[/] [green]{report.mean_hook:.2f}[/]"
+    )
+    worst = report.worst_item
+    if worst is not None:
+        console.print(
+            f"[bold]Worst:[/] [dim]{worst.generation.run_id}[/] "
+            f"({worst.judgment.scores.overall:.1f}) — {worst.topic}"
+        )
+
+
+@evals_app.command("show")
+def evals_show(run_id: str = typer.Argument(..., help="Run ID to show judgments for.")) -> None:
+    """Show the judgment(s) recorded for a given run."""
+    tracer = build_tracer()
+    judgments = tracer.judgments_for_run(run_id)
+
+    if not judgments:
+        console.print(f"[red]No judgments found for run_id={run_id!r}[/]")
+        raise typer.Exit(code=1)
+
+    for j in judgments:
+        summary = (
+            f"[bold cyan]{j.run_id}[/]\n"
+            f"judge: [dim]{j.judge_model}[/]   "
+            f"judged_at: [dim]{j.judged_at.strftime('%Y-%m-%d %H:%M:%S')}[/]\n\n"
+            f"hook: [green]{j.scores.hook_strength}[/]/10   "
+            f"clarity: [green]{j.scores.clarity}[/]/10   "
+            f"persona: [green]{j.scores.persona_fit}[/]/10   "
+            f"engage: [green]{j.scores.engagement_potential}[/]/10   "
+            f"[bold]overall: [green]{j.scores.overall:.1f}[/][/]\n\n"
+            f"[bold]Reasoning:[/]\n{j.reasoning}"
+        )
+        console.print(Panel(summary, title="Judgment", expand=False))
 
 
 if __name__ == "__main__":
