@@ -21,7 +21,10 @@ class _FakePipeline:
             topic=topic,
             research="- insight",
             draft="draft",
+            edited_draft="edited",
             final_post=self._posts[idx],
+            hashtags=["#AI"],
+            carousel_slides=[],
             total_cost=0.1,
         )
 
