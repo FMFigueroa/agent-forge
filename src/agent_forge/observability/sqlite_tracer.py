@@ -1,10 +1,20 @@
+from datetime import datetime
 from statistics import quantiles
 
+from pydantic import BaseModel
 from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
 from agent_forge.agents.models import TraceSpan
 from agent_forge.observability.db import RunRow, SpanRow, create_db_engine, init_db
+
+
+class RunSummary(BaseModel):
+    run_id: str
+    created_at: datetime
+    status: str
+    span_count: int
+    total_cost: float
 
 
 class SQLiteTracer:
@@ -42,6 +52,33 @@ class SQLiteTracer:
         if len(latencies) < 2:
             return latencies[0]
         return quantiles(latencies, n=20)[18]
+
+    def list_runs(self, limit: int = 10) -> list[RunSummary]:
+        with Session(self._engine) as session:
+            runs = session.scalars(
+                select(RunRow).order_by(col(RunRow.created_at).desc()).limit(limit)
+            ).all()
+            if not runs:
+                return []
+            run_ids = [r.id for r in runs]
+            spans = session.scalars(select(SpanRow).where(col(SpanRow.run_id).in_(run_ids))).all()
+
+        counts: dict[str, int] = {}
+        costs: dict[str, float] = {}
+        for s in spans:
+            counts[s.run_id] = counts.get(s.run_id, 0) + 1
+            costs[s.run_id] = costs.get(s.run_id, 0.0) + s.cost_usd
+
+        return [
+            RunSummary(
+                run_id=r.id,
+                created_at=r.created_at,
+                status=r.status,
+                span_count=counts.get(r.id, 0),
+                total_cost=costs.get(r.id, 0.0),
+            )
+            for r in runs
+        ]
 
     def mark_run_status(self, run_id: str, status: str) -> None:
         with Session(self._engine) as session:
