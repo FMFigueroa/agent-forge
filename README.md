@@ -69,7 +69,7 @@ A **golden set** of 20 prompts catches regressions when prompts/models change.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  CLI / FastAPI / Next.js UI                           │
+│  CLI / FastAPI / Next.js UI                          │
 └────────────────┬─────────────────────────────────────┘
                  ↓
     ┌────────────────────┐
@@ -81,7 +81,7 @@ A **golden set** of 20 prompts catches regressions when prompts/models change.
     └────────────────┬───────────────────────┘
                      ↓
     ┌────────────────────────────────────────┐
-    │  Observability Layer                    │
+    │  Observability Layer                   │
     │  - Tracer (every Claude call → SQLite) │
     │  - Cost tracker (tokens × pricing)     │
     │  - LLM-as-judge evals                  │
