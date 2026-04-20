@@ -29,7 +29,7 @@ def generate(
 
 
 @app.command()
-def serve(host: str = "0.0.0.0", port: int = 8000) -> None:  # noqa: S104
+def serve(host: str = "0.0.0.0", port: int = 8000) -> None:
     """Run the FastAPI server. (stub)"""
     console.print(f"[yellow]→ Will start server on {host}:{port}[/]")
     console.print("[red]Not yet implemented — coming soon.[/]")
